@@ -98,3 +98,11 @@ Note: The script also handles docker run
    ```{r}
    Get-Item .\runs\drowsy_run1\weights\best.pt | Select-Object Name, @{Name="Size (MB)";Expression={"{0:N2}" -f ($_.Length / 1MB)}}
    ```
+
+## Inference
+   ```
+   yolo detect predict `
+   model=runs\drowsy_run5\weights\best.pt `
+   source=0 `
+   conf=0.25 imgsz=1280
+   ```
