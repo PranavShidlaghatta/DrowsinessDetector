@@ -2,7 +2,7 @@
 # custom run command example: .\docker_training.ps1 -Model yolov8n.pt -Epochs 50 -ImgSz 640 -Batch 8 -RunName drowsy_run2
 param(
   [string]$Model   = "yolov8n.pt",
-  [int]   $Epochs  = 1,
+  [int]   $Epochs  = 100,
   [int]   $ImgSz   = 1280,
   [int]   $Batch   = 32,
   [string]$RunName = "drowsy_run1"
