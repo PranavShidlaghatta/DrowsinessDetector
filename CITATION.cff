@@ -1,0 +1,13 @@
+@misc{
+                            eyes-close-open-yawn-no-yawn_dataset,
+                            title = { eyes close open yawn no yawn Dataset },
+                            type = { Open Source Dataset },
+                            author = { lab502new },
+                            howpublished = { \url{ https://universe.roboflow.com/lab502new/eyes-close-open-yawn-no-yawn } },
+                            url = { https://universe.roboflow.com/lab502new/eyes-close-open-yawn-no-yawn },
+                            journal = { Roboflow Universe },
+                            publisher = { Roboflow },
+                            year = { 2025 },
+                            month = { jul },
+                            note = { visited on 2025-11-17 },
+                            }
