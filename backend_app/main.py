@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+# NOTE: Blanket CORS policy, make more specific later. 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

@@ -1,3 +1,6 @@
 data/
 dashboard/.next
 dashboard/node_modules
+runs/detect
+
+backend_app/__pycache__
