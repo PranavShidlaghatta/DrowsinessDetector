@@ -1,14 +1,65 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, Typography, Box } from "@mui/material";
+import { Card, CardContent, Typography, Box, SwipeableDrawer} from "@mui/material";
+import CoffeeIcon from "@mui/icons-material/LocalCafe";
+import LocalCafeIcon from "@mui/icons-material/LocalCafe";
+
+import { grey } from "@mui/material/colors";
+
+function useDrowsinessStream() {
+  const [score, setScore] = useState<any>(null);
+
+  useEffect(() => {
+    const ws = new WebSocket("ws://localhost:8000/ws");
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        // expect { score: <number> } but don't transform it
+        console.log("drowsiness message:", data.score);
+        setScore(data.score);
+      } catch (err) {
+        console.error("failed to parse websocket message", err);
+      }
+    };
+
+    ws.onerror = (err) => {
+      console.error("websocket error", err);
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, []);
+
+  return score; // e.g. { score: 0.73 }
+}
+
+// --- drawer constants (can move outside file)
+const drawerBleeding = 56;
 
 export default function Dashboard() {
-  const [speed, setSpeed] = useState(35);
+  const drowsinessScore = useDrowsinessStream();
+  const [drawerOpen, setDrawerOpen] = useState(false); 
+
+  useEffect(() => {
+    if (drowsinessScore == null) return; 
+    if (drowsinessScore >= 0.3) {
+      setDrawerOpen(true);
+    } else {
+      setDrawerOpen(false);
+    }
+  }, [drowsinessScore])
+
+
+  const [speed, setSpeed] = useState(0);
   const maxSpeed = 140;
   const accelRate = 4;
   const decelRate = 1;
   const [keys, setKeys] = useState({ up: false, down: false });
+
+  // --- Drowsiness score message ---- 
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -133,6 +184,7 @@ export default function Dashboard() {
         </Card>
 
         {/* CENTER: number + miles + bar */}
+        {!drawerOpen && (
         <Card
           sx={{
             width: 180,
@@ -183,6 +235,7 @@ export default function Dashboard() {
             </Box>
           </CardContent>
         </Card>
+        )}
 
         {/* RIGHT: Speedometer (no labels, just arcs + big number) */}
         <Card
@@ -246,6 +299,65 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </Box>
+
+      {/* Bottom auto-opening drawer for drowsiness */}
+      <SwipeableDrawer
+        anchor="bottom"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onOpen={() => setDrawerOpen(true)}
+        swipeAreaWidth={56}
+        disableSwipeToOpen
+        keepMounted
+        slotProps={{
+          paper : {
+            sx: {
+              height: "40vh",
+              overflow: "visible",
+              backgroundColor: "#111",
+              color: "#fff",
+            },
+          }
+        }}
+      >
+        {/* Grip + coffee icon header */}
+        <Box
+          sx={{
+            position: "absolute",
+            top: -56,
+            borderTopLeftRadius: 8,
+            borderTopRightRadius: 8,
+            right: 0,
+            left: 0,
+            backgroundColor: "#111",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            py: 1,
+          }}
+        >
+          <Box
+            sx={{
+              width: 30,
+              height: 6,
+              backgroundColor: grey[700],
+              borderRadius: 3,
+              mb: 1,
+            }}
+          />
+          <LocalCafeIcon sx={{ fontSize: 32 }} />
+        </Box>
+
+        {/* Drawer body */}
+        <Box sx={{ px: 3, pb: 3, pt: 4 }}>
+          <Typography variant="h6" gutterBottom>
+            Take a break
+          </Typography>
+          <Typography variant="body2">
+            Your drowsiness score is {drowsinessScore?.toFixed(2)}.
+          </Typography>
+        </Box>
+      </SwipeableDrawer>
     </Box>
   );
 }
