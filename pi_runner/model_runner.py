@@ -1,21 +1,42 @@
 '''
 NOTE: 
 - The python script that will run on the raspberry pi. 
+--> May need to package in a docker container with ARM .whl installations. 
+--> I see the camera device module becoming a problem in time.
 '''
 
 import cv2
 from ultralytics import YOLO
+import requests
 from collections import deque
+import time 
 
 model = YOLO(r"/home/rayan/436/DrowsinessDetector/runs/drowsy_run5/weights/best.pt")
 class_names = model.names  
+FASTAPI_URL = "http://localhost:8000/piRunner"
 # print(class_names)
+# { 0: No Yawn , 1: Yawn , 2: closed eyes , 3: open eyes }
 
-window_size = 60 # around 2-4 seconds at 30 FPS
+window_seconds = 2 
 threshold = 0.3 # 30% of frames indicating drowsiness 
+alpha = 0.9
+momentum_score = 0 
+drowsy_buffer = deque()
 
-# Drowsy buffer will store last N frames at a time 
-drowsy_buffer = deque(maxlen=window_size)
+# Exponential weighted moving average 
+def ewma_momentum(drowsy_buffer, alpha=0.9, momentum_score = 0):
+    weighted_sum = 0 
+    weight_total = 0
+    N = len(drowsy_buffer)
+    for i, (ts, signal) in enumerate(drowsy_buffer):
+        weight = alpha ** (N - i - 1)
+        weighted_sum += signal * weight 
+        weight_total += weight 
+    weighted_ratio = weighted_sum / weight_total if weight_total != 0 else 0 
+
+    momentum_score = alpha * momentum_score + (1 - alpha) * weighted_ratio
+
+    return momentum_score
 
 # NOTE: Pain point on linux dev, might be a failure point on pi OS. 
 cap = cv2.VideoCapture("/dev/video0", cv2.CAP_V4L2)
@@ -41,19 +62,28 @@ while True:
         #     print(f"Detected class -->{cls_name}<-- with confidence {conf:.2f}")
 
         cls_idx = int(results[0].boxes[0].cls[0]) 
-        if cls_idx in [1,2]:
-            drowsy_signal = 1 
-        else: 
-            drowsy_signal = 0 
+        drowsy_signal = 1 if cls_idx in [1,2] else 0 
     else:
         drowsy_signal = 0
         # print("No detections")
-    
-    drowsy_buffer.append(drowsy_signal)
-    
-    drowsy_ratio = sum(drowsy_buffer) / len(drowsy_buffer)
 
-    if drowsy_ratio > threshold:
+    curr_time = time.time()
+    drowsy_buffer.append((curr_time, drowsy_signal))
+
+    # only hold frames that are within sliding window of `window_seconds` length 
+    while drowsy_buffer and (curr_time - drowsy_buffer[0][0]) > window_seconds: 
+        drowsy_buffer.popleft()
+    
+    # drowsy_ratio = sum(signal for (ts, signal) in drowsy_buffer) / len(drowsy_buffer)
+    momentum_score = ewma_momentum(drowsy_buffer, alpha, momentum_score)
+
+    try: 
+        payload = {"drowsiness_score": float(momentum_score)}
+        requests.post(FASTAPI_URL, json=payload, timeout=0.5)
+    except requests.exceptions.RequestException as e: 
+        print(f"Failed to send score {e}")
+
+    if momentum_score > threshold:
         print("Drowsiness detected! 🚨")
     else: 
         print("Waiting...")

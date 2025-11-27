@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
 
 app = FastAPI()
 
@@ -12,9 +14,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# model for drowsiness score 
+class PiScore(BaseModel):
+    drowsiness_score: float
+
 @app.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"status" : "success", "on root" : "yes"} 
+
+@app.post("/piRunner")
+async def get_heuristic(score: PiScore):
+    """
+    Receives drowsiness score as json from Raspberry Pi.
+    """
+    print(f"Received drowsiness score: {score.drowsiness_score:.2f}", flush=True)
+    return {"status": "success", "received_score": score.drowsiness_score}
+
 
 @app.get("/status")
 async def status():
