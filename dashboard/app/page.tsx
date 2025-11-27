@@ -1,30 +1,251 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Card, CardContent, Typography, Box } from "@mui/material";
+
 export default function Dashboard() {
+  const [speed, setSpeed] = useState(35);
+  const maxSpeed = 140;
+  const accelRate = 4;
+  const decelRate = 1;
+  const [keys, setKeys] = useState({ up: false, down: false });
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowUp") setKeys((p) => ({ ...p, up: true }));
+      if (e.key === "ArrowDown") setKeys((p) => ({ ...p, down: true }));
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "ArrowUp") setKeys((p) => ({ ...p, up: false }));
+      if (e.key === "ArrowDown") setKeys((p) => ({ ...p, down: false }));
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSpeed((prev) => {
+        let next = prev;
+        if (keys.up) next += accelRate;
+        if (keys.down) next -= decelRate;
+        next = Math.min(maxSpeed, Math.max(0, next));
+        return next;
+      });
+    }, 16);
+    return () => clearInterval(interval);
+  }, [keys]);
+
+  // helpers
+  const mapRange = (
+    v: number,
+    inMin: number,
+    inMax: number,
+    outMin: number,
+    outMax: number
+  ) => outMin + ((v - inMin) * (outMax - outMin)) / (inMax - inMin);
+
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+
+  const centerX = 130;
+  const centerY = 140;
+  const radius = 95;
+  const circumference = Math.PI * radius;
+
+  const tachAngle = mapRange(speed, 0, maxSpeed, -180, 0);
+  const needleLen = 80; // was 80
+  const needleX = centerX + needleLen * Math.cos(toRad(tachAngle));
+  const needleY = centerY + needleLen * Math.sin(toRad(tachAngle));
+
+  const speedPercent = speed / maxSpeed;
+  const arcDashoffset = circumference * (1 - speedPercent);
+
   return (
-    <div className="min-h-screen bg-[#1a1a1a] text-white flex items-center justify-center">
-      <div className="flex flex-col md:flex-row gap-10 items-center">
-        {/* Speedometer Box */}
-        <div className="bg-gray-800 w-72 h-72 rounded-xl shadow-xl flex flex-col items-center justify-start relative">
-          {/* Semicircle border */}
-          <div className="w-48 h-24 border-t-4 border-white rounded-t-full absolute top-4"></div>
+    <Box
+      sx={{
+        height: "100vh",
+        backgroundColor: "#111",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      <Box sx={{ display: "flex", gap: 6, alignItems: "center" }}>
+        {/* LEFT: Tachometer (no labels) */}
+        <Card
+          sx={{
+            width: 280,
+            height: 280,
+            backgroundColor: "#111",
+            color: "white",
+            borderRadius: 3,
+            boxShadow: "none",
+            border: "2px solid #fff",
+          }}
+        >
+          <CardContent
+            sx={{
+              textAlign: "center",
+              width: "100%",
+              padding: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              height: "100%",
+            }}
+          >
+            <svg width="260" height="180" viewBox="0 0 260 180">
+              <path
+                d="M40,140 A110,110 0 0 1 220,140"
+                stroke="#fff"
+                strokeWidth="8"
+                fill="none"
+              />
+              <path
+                d="M55,140 A95,95 0 0 1 205,140"
+                stroke="#555"
+                strokeWidth="10"
+                fill="none"
+              />
+              <path
+                d="M75,140 A70,70 0 0 1 185,140"
+                stroke="#fff"
+                strokeWidth="3"
+                fill="none"
+              />
+              <line
+                x1={centerX}
+                y1={centerY}
+                x2={needleX}
+                y2={needleY}
+                stroke="#fff"
+                strokeWidth="3"
+              />
+            </svg>
+          </CardContent>
+        </Card>
 
-          {/* Needle resting flat */}
-          <div className="h-1 w-24 bg-red-500 absolute left-[calc(50%-12px)] top-24 origin-left rotate-0"></div>
+        {/* CENTER: number + miles + bar */}
+        <Card
+          sx={{
+            width: 180,
+            height: 180,
+            backgroundColor: "#111",
+            color: "white",
+            borderRadius: 3,
+            boxShadow: "none",
+            border: "2px solid #fff",
+            display: "flex",
+          }}
+        >
+          <CardContent
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "100%",
+              gap: 1,
+            }}
+          >
+            <Typography variant="h3" sx={{ fontWeight: "bold" }}>
+              {Math.round(speed)}
+            </Typography>
+            <Box sx={{ width: "40px", height: "2px", bgcolor: "#fff", my: 0.5 }} />
+            <Typography variant="body2" sx={{ letterSpacing: 1 }}>
+              1234 miles
+            </Typography>
+            <Box
+              sx={{
+                display: "flex",
+                gap: 0.3,
+                mt: 1.5,
+              }}
+            >
+              {Array.from({ length: 12 }).map((_, i) => (
+                <Box
+                  key={i}
+                  sx={{
+                    width: 8,
+                    height: 14,
+                    border: "1px solid #fff",
+                    bgcolor: i < 3 ? "#ff3b3b" : "transparent",
+                  }}
+                />
+              ))}
+            </Box>
+          </CardContent>
+        </Card>
 
-
-          <p className="absolute bottom-6 text-3xl text-gray-300">Speedometer</p>
-        </div>
-
-        {/* Center Number Box */}
-        <div className="bg-gray-800 w-32 h-32 p-4 rounded-xl shadow-xl flex flex-col items-center justify-center">
-          <h2 className="text-3xl font-bold">42</h2>
-          <p className="text-gray-400 text-sm">Current Value</p>
-        </div>
-
-        {/* Power Meter Box */}
-        <div className="bg-gray-800 w-72 h-72 p-6 rounded-xl shadow-xl flex items-center justify-center">
-          <p className="text-3xl text-gray-300">Power Meter</p>
-        </div>
-      </div>
-    </div>
+        {/* RIGHT: Speedometer (no labels, just arcs + big number) */}
+        <Card
+          sx={{
+            width: 280,
+            height: 280,
+            backgroundColor: "#111",
+            color: "white",
+            borderRadius: 3,
+            boxShadow: "none",
+            border: "2px solid #fff",
+          }}
+        >
+          <CardContent
+            sx={{
+              textAlign: "center",
+              width: "100%",
+              padding: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              height: "100%",
+            }}
+          >
+            <svg width="260" height="180" viewBox="0 0 260 180">
+              <path
+                d="M40,135 A110,110 0 0 1 220,135"
+                stroke="#444"
+                strokeWidth="10"
+                fill="none"
+                strokeLinecap="round"
+              />
+              <path
+                d="M55,135 A95,95 0 0 1 205,135"
+                stroke="#777"
+                strokeWidth="4"
+                fill="none"
+                strokeDasharray="2 4"
+              />
+              <path
+                d="M55,135 A95,95 0 0 1 205,135"
+                stroke="#fff"
+                strokeWidth="4"
+                fill="none"
+                strokeDasharray={circumference}
+                strokeDashoffset={arcDashoffset}
+                style={{ transition: "stroke-dashoffset 0.1s linear" }}
+              />
+              <text
+                x={centerX}
+                y="155"
+                fill="#fff"
+                fontSize="40"
+                textAnchor="middle"
+                dominantBaseline="middle"
+              >
+                {Math.round(speed)}
+              </text>
+            </svg>
+          </CardContent>
+        </Card>
+      </Box>
+    </Box>
   );
 }

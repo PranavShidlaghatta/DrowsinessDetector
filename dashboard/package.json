@@ -11,6 +11,10 @@
   },
   "dependencies": {
     "@bento-ui/react": "^1.0.1",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.5",
+    "@mui/material": "^7.3.5",
     "next": "^14.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
