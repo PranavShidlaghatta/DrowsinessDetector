@@ -43,6 +43,36 @@ export default function Dashboard() {
   const drowsinessScore = useDrowsinessStream();
   const [drawerOpen, setDrawerOpen] = useState(false); 
 
+
+   //-------------------------------------
+  // AUDIO ENGINE SETUP (SSR-safe)
+  //-------------------------------------
+  const [audioCtx, setAudioCtx] = useState<AudioContext | null>(null);
+  const [gainNode, setGainNode] = useState<GainNode | null>(null);
+  const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
+  const [sourceNode, setSourceNode] = useState<AudioBufferSourceNode | null>(null);
+
+
+  // Create AudioContext + GainNode on client
+  useEffect(() => {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    gain.connect(ctx.destination);
+    setAudioCtx(ctx);
+    setGainNode(gain);
+  }, []);
+
+  // Fetch jingle after AudioContext is ready
+  useEffect(() => {
+    if (!audioCtx) return;
+    fetch("/jingle.mp3")               // <-- put your jingle.mp3 in /public
+      .then(res => res.arrayBuffer())
+      .then(buf => audioCtx.decodeAudioData(buf))
+      .then(decoded => setAudioBuffer(decoded));
+  }, [audioCtx]);
+
+
   useEffect(() => {
     if (drowsinessScore == null) return; 
     if (drowsinessScore >= 0.3) {
@@ -51,6 +81,37 @@ export default function Dashboard() {
       setDrawerOpen(false);
     }
   }, [drowsinessScore])
+
+
+  useEffect(() => {
+  if (!audioCtx || !gainNode || !audioBuffer || drowsinessScore == null) return;
+  audioCtx.resume(); // unlock audio on first interaction
+  
+  if (drowsinessScore >= 0.3) {
+    if (!sourceNode) {
+      const source = audioCtx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.loop = true; // keep playing while alert is active
+      source.connect(gainNode);
+      source.start();
+      setSourceNode(source);
+    }
+
+    const vol = Math.min(0.2, drowsinessScore * 0.6);
+    gainNode.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.1);
+
+  } else {
+    gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.2);
+    // Stop the source after fade out
+    if (sourceNode) {
+      sourceNode.stop(audioCtx.currentTime + 0.25); // stop slightly after fade
+      setSourceNode(null);
+    }
+  }
+  }, [drowsinessScore, audioBuffer, audioCtx, gainNode]);
+
+
+
 
 
   const [speed, setSpeed] = useState(0);
@@ -121,7 +182,8 @@ export default function Dashboard() {
     <Box
       sx={{
         height: "100vh",
-        backgroundColor: "#111",
+        backgroundColor: drawerOpen ? "#ffcccc" : "#111",
+        transition: "background-color 0.5s ease", // for background transition 
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
@@ -184,7 +246,8 @@ export default function Dashboard() {
         </Card>
 
         {/* CENTER: number + miles + bar */}
-        {!drawerOpen && (
+        {/* Used to have !drawerOpen && () */}
+        {(
         <Card
           sx={{
             width: 180,
@@ -345,17 +408,23 @@ export default function Dashboard() {
               mb: 1,
             }}
           />
-          <LocalCafeIcon sx={{ fontSize: 32 }} />
+          <LocalCafeIcon sx={{ fontSize: 54 }} />
         </Box>
 
         {/* Drawer body */}
         <Box sx={{ px: 3, pb: 3, pt: 4 }}>
-          <Typography variant="h6" gutterBottom>
-            Take a break
-          </Typography>
-          <Typography variant="body2">
-            Your drowsiness score is {drowsinessScore?.toFixed(2)}.
-          </Typography>
+            <Typography variant="h6" gutterBottom>
+              Take a break
+            </Typography>
+            <Typography variant="body2">
+              {(() => {
+                if (!drowsinessScore) return "You may need a break";
+                if (drowsinessScore >= 0.8) return "I heavily suggest a break";
+                if (drowsinessScore >= 0.6) return "You are starting to look sleepier, you should take a break";
+                if (drowsinessScore >= 0.3) return "You may need a break";
+                return "You may need a break";
+              })()}
+            </Typography>
         </Box>
       </SwipeableDrawer>
     </Box>

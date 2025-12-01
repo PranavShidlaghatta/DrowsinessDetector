@@ -18,26 +18,37 @@ FASTAPI_URL = "http://localhost:8000/piRunner"
 # print(class_names)
 # { 0: No Yawn , 1: Yawn , 2: closed eyes , 3: open eyes }
 
-window_seconds = 2 
+window_seconds = 5 # original 2 seconds 
 threshold = 0.3 # 30% of frames indicating drowsiness 
-alpha = 0.9
-momentum_score = 0 
+alpha = 0.95 # original 0.9 
+momentum_score = 0  
 drowsy_buffer = deque()
 
 # Exponential weighted moving average 
-def ewma_momentum(drowsy_buffer, alpha=0.9, momentum_score = 0):
-    weighted_sum = 0 
-    weight_total = 0
-    N = len(drowsy_buffer)
-    for i, (ts, signal) in enumerate(drowsy_buffer):
-        weight = alpha ** (N - i - 1)
-        weighted_sum += signal * weight 
-        weight_total += weight 
-    weighted_ratio = weighted_sum / weight_total if weight_total != 0 else 0 
+# def ewma_momentum(drowsy_buffer, alpha=0.9, momentum_score = 0):
+#     weighted_sum = 0 
+#     weight_total = 0
+#     N = len(drowsy_buffer)
+#     for i, (ts, signal) in enumerate(drowsy_buffer):
+#         weight = alpha ** (N - i - 1)
+#         weighted_sum += signal * weight 
+#         weight_total += weight 
+#     weighted_ratio = weighted_sum / weight_total if weight_total != 0 else 0 
 
-    momentum_score = alpha * momentum_score + (1 - alpha) * weighted_ratio
+#     momentum_score = alpha * momentum_score + (1 - alpha) * weighted_ratio
 
-    return momentum_score
+#     return momentum_score
+
+def rolling_average(drowsy_buffer, alpha=0.95, prev_score=0):
+    if not drowsy_buffer:
+        return 0
+    # Compute average of signals in buffer
+    avg_signal = sum(signal for _, signal in drowsy_buffer) / len(drowsy_buffer)
+    # Optional smoothing
+    smoothed = alpha * prev_score + (1 - alpha) * avg_signal
+    smoothed = avg_signal
+    return smoothed
+
 
 # NOTE: Pain point on linux dev, might be a failure point on pi OS. 
 cap = cv2.VideoCapture("/dev/video0", cv2.CAP_V4L2)
@@ -52,7 +63,8 @@ while True:
         print("Failed to grab frame")
         break
 
-    results = model.predict(frame, conf=0.25, verbose=False)
+    # originally 0.25
+    results = model.predict(frame, conf=0.485, verbose=False)
     annotated_frame = results[0].plot() 
 
     if results[0].boxes: 
@@ -76,7 +88,7 @@ while True:
         drowsy_buffer.popleft()
     
     # drowsy_ratio = sum(signal for (ts, signal) in drowsy_buffer) / len(drowsy_buffer)
-    momentum_score = ewma_momentum(drowsy_buffer, alpha, momentum_score)
+    momentum_score = rolling_average(drowsy_buffer, alpha, momentum_score)
 
     try: 
         payload = {"drowsiness_score": float(momentum_score)}
