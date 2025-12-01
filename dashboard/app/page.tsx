@@ -55,8 +55,8 @@ export default function Dashboard() {
 
   const [speed, setSpeed] = useState(0);
   const maxSpeed = 140;
-  const accelRate = 4;
-  const decelRate = 1;
+  const accelRate = 2;
+  const decelRate = 2;
   const [keys, setKeys] = useState({ up: false, down: false });
 
   // --- Drowsiness score message ---- 

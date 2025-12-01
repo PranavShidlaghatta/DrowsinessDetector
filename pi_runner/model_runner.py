@@ -11,6 +11,7 @@ import requests
 from collections import deque
 import time 
 
+# NOTE: ORIGINALLY USED DROWSY_RUN5/WEIGHTS/BEST.PT
 model = YOLO(r"/home/rayan/436/DrowsinessDetector/runs/drowsy_run5/weights/best.pt")
 class_names = model.names  
 FASTAPI_URL = "http://localhost:8000/piRunner"

@@ -106,3 +106,7 @@ Note: The script also handles docker run
    source=0 `
    conf=0.25 imgsz=1280
    ```
+
+
+## Fullstack application setup 
+
