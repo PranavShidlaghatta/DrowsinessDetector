@@ -24,6 +24,7 @@ while True:
         speed_m_s = struct.unpack_from("<f", data, SPEED_OFFSET)[0]
         current_rpm = struct.unpack_from("<f", data, OFFSET_CURRENT_RPM)[0]
         max_rpm = struct.unpack_from("<f", data, OFFSET_MAX_RPM)[0]
+        rpm_percent = (current_rpm / max_rpm) * 100
         speed_kmh = speed_m_s * 3.6
         speed_mph = speed_m_s * 2.23694
     else:
@@ -32,7 +33,7 @@ while True:
     print(f"Speed: {speed_m_s:.2f} m/s  | {speed_kmh:.2f} km/h | {speed_mph:.2f} mph")
     try:
         speed_mph = float(speed_mph)
-        payload = {"speed_mph": speed_mph}
+        payload = {"speed_mph": speed_mph, "current_rpm" : rpm_percent}
         # print(payload, type(payload["speed_mph"]))
         requests.post(API_URL, json=payload, timeout=0.2)
     except Exception as e:

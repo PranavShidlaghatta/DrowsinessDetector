@@ -12,6 +12,7 @@ import { grey } from "@mui/material/colors";
 function useDrowsinessStream() {
   const [score, setScore] = useState<any>(null);
   const [speed, setSpeed] = useState<number | null>(null);
+  const [rpm, setRPM] = useState<number | null>(null);
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:8000/ws");
 
@@ -31,6 +32,12 @@ function useDrowsinessStream() {
           setSpeed(data.speed_mph);
         }
 
+        // handle rpm 
+        if ("current_rpm" in data) {
+          console.log("rpm:", data.current_rpm);
+          setRPM(data.current_rpm);
+        }
+
       } catch (err) {
         console.error("failed to parse websocket message", err);
       }
@@ -45,7 +52,7 @@ function useDrowsinessStream() {
     };
   }, []);
 
-  return {score, speed}; // e.g. { score: 0.73 }
+  return {score, speed, rpm}; // e.g. { score: 0.73 }
 }
 
 
@@ -54,7 +61,7 @@ function useDrowsinessStream() {
 const drawerBleeding = 56;
 
 export default function Dashboard() {
-  const {score, speed} = useDrowsinessStream();
+  const {score, speed, rpm} = useDrowsinessStream();
   const [drawerOpen, setDrawerOpen] = useState(false); 
 
   const drowsinessScore = score;
@@ -128,7 +135,7 @@ export default function Dashboard() {
   // const [speed, setSpeed] = useState(0);
 
   // const speed = useSpeedStream();
-  const maxSpeed = 140;
+  const maxSpeed = 100;
   const accelRate = 2;
   const decelRate = 2;
   // const [keys, setKeys] = useState({ up: false, down: false });
@@ -183,7 +190,7 @@ export default function Dashboard() {
   const radius = 95;
   const circumference = Math.PI * radius;
 
-  const tachAngle = mapRange(speed, 0, maxSpeed, -180, 0);
+  const tachAngle = mapRange(rpm, 0, maxSpeed, -180, 0);
   const needleLen = 80; // was 80
   const needleX = centerX + needleLen * Math.cos(toRad(tachAngle));
   const needleY = centerY + needleLen * Math.sin(toRad(tachAngle));

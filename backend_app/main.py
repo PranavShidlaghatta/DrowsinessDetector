@@ -15,6 +15,7 @@ app.add_middleware(
 
 class SpeedPayload(BaseModel):
     speed_mph: float
+    current_rpm: float 
 # model for drowsiness score 
 class PiScore(BaseModel):
     drowsiness_score: float
@@ -48,8 +49,11 @@ async def get_heuristic(score: PiScore):
 async def update_speed(payload: SpeedPayload):
     global latest_speed_mph
     latest_speed_mph = payload.speed_mph
-    print(f"Received speed level: {latest_speed_mph}")
+    rpm_percentage = payload.current_rpm
+    # print(f"Received speed level: {latest_speed_mph}")
+    print(f"Received rpm: {rpm_percentage}")
     await broadcast_payload({"speed_mph": latest_speed_mph})
+    await broadcast_payload({"current_rpm" : rpm_percentage})
     return {"status": "ok"}
 
 @app.get("/speed")

@@ -51,7 +51,7 @@ def rolling_average(drowsy_buffer, alpha=0.95, prev_score=0):
 
 
 # NOTE: Pain point on linux dev, might be a failure point on pi OS. 
-cap = cv2.VideoCapture("/dev/video0", cv2.CAP_V4L2)
+cap = cv2.VideoCapture("/dev/video0", cv2.CAP_V4L2)  # video0 is for laptop webcam; video4 for USB webcam 
 
 if not cap.isOpened():
     print("Error: Cannot open camera")
