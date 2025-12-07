@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-# NOTE: Very bad blanket CORS policy, make more specific later. 
+# NOTE: Very baad blanket CORS policy, make more specific later. 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,16 +13,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class SpeedPayload(BaseModel):
+    speed_mph: float
 # model for drowsiness score 
 class PiScore(BaseModel):
     drowsiness_score: float
 
+latest_speed_mph: float = 0.0
+
 active_sockets: list[WebSocket] = []
 
-async def broadcast_score(score: float):
+async def broadcast_payload(payload: dict):
   for ws in list(active_sockets):
     try:
-      await ws.send_json({"score": score})
+      await ws.send_json(payload)
     except Exception:
       # drop dead sockets
       active_sockets.remove(ws)
@@ -37,8 +41,20 @@ async def get_heuristic(score: PiScore):
     Receives drowsiness score as json from Raspberry Pi.
     """
     print(f"Received drowsiness score: {score.drowsiness_score:.2f}", flush=True)
-    await broadcast_score(score.drowsiness_score)
+    await broadcast_payload({"score" : score.drowsiness_score})
     return {"status": "success", "received_score": score.drowsiness_score}
+
+@app.post("/speed")
+async def update_speed(payload: SpeedPayload):
+    global latest_speed_mph
+    latest_speed_mph = payload.speed_mph
+    print(f"Received speed level: {latest_speed_mph}")
+    await broadcast_payload({"speed_mph": latest_speed_mph})
+    return {"status": "ok"}
+
+@app.get("/speed")
+async def get_speed():
+    return {"speed_mph": latest_speed_mph}
 
 @app.websocket("/ws")
 async def ws_endpoint(websocket: WebSocket):

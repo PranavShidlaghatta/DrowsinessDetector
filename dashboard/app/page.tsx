@@ -7,18 +7,30 @@ import LocalCafeIcon from "@mui/icons-material/LocalCafe";
 
 import { grey } from "@mui/material/colors";
 
+
+
 function useDrowsinessStream() {
   const [score, setScore] = useState<any>(null);
-
+  const [speed, setSpeed] = useState<number | null>(null);
   useEffect(() => {
     const ws = new WebSocket("ws://localhost:8000/ws");
 
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        // expect { score: <number> } but don't transform it
-        console.log("drowsiness message:", data.score);
-        setScore(data.score);
+
+        // Handle drowsiness score
+        if ("score" in data) {
+          console.log("drowsiness message:", data.score);
+          setScore(data.score);
+        }
+
+        // Handle speed
+        if ("speed_mph" in data) {
+          console.log("speed message:", data.speed_mph);
+          setSpeed(data.speed_mph);
+        }
+
       } catch (err) {
         console.error("failed to parse websocket message", err);
       }
@@ -33,17 +45,19 @@ function useDrowsinessStream() {
     };
   }, []);
 
-  return score; // e.g. { score: 0.73 }
+  return {score, speed}; // e.g. { score: 0.73 }
 }
+
+
 
 // --- drawer constants (can move outside file)
 const drawerBleeding = 56;
 
 export default function Dashboard() {
-  const drowsinessScore = useDrowsinessStream();
+  const {score, speed} = useDrowsinessStream();
   const [drawerOpen, setDrawerOpen] = useState(false); 
 
-
+  const drowsinessScore = score;
    //-------------------------------------
   // AUDIO ENGINE SETUP (SSR-safe)
   //-------------------------------------
@@ -111,48 +125,47 @@ export default function Dashboard() {
   }, [drowsinessScore, audioBuffer, audioCtx, gainNode]);
 
 
+  // const [speed, setSpeed] = useState(0);
 
-
-
-  const [speed, setSpeed] = useState(0);
+  // const speed = useSpeedStream();
   const maxSpeed = 140;
   const accelRate = 2;
   const decelRate = 2;
-  const [keys, setKeys] = useState({ up: false, down: false });
+  // const [keys, setKeys] = useState({ up: false, down: false });
 
   // --- Drowsiness score message ---- 
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowUp") setKeys((p) => ({ ...p, up: true }));
-      if (e.key === "ArrowDown") setKeys((p) => ({ ...p, down: true }));
-    };
+  // useEffect(() => {
+  //   const handleKeyDown = (e: KeyboardEvent) => {
+  //     if (e.key === "ArrowUp") setKeys((p) => ({ ...p, up: true }));
+  //     if (e.key === "ArrowDown") setKeys((p) => ({ ...p, down: true }));
+  //   };
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === "ArrowUp") setKeys((p) => ({ ...p, up: false }));
-      if (e.key === "ArrowDown") setKeys((p) => ({ ...p, down: false }));
-    };
+  //   const handleKeyUp = (e: KeyboardEvent) => {
+  //     if (e.key === "ArrowUp") setKeys((p) => ({ ...p, up: false }));
+  //     if (e.key === "ArrowDown") setKeys((p) => ({ ...p, down: false }));
+  //   };
 
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-    };
-  }, []);
+  //   window.addEventListener("keydown", handleKeyDown);
+  //   window.addEventListener("keyup", handleKeyUp);
+  //   return () => {
+  //     window.removeEventListener("keydown", handleKeyDown);
+  //     window.removeEventListener("keyup", handleKeyUp);
+  //   };
+  // }, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSpeed((prev) => {
-        let next = prev;
-        if (keys.up) next += accelRate;
-        if (keys.down) next -= decelRate;
-        next = Math.min(maxSpeed, Math.max(0, next));
-        return next;
-      });
-    }, 16);
-    return () => clearInterval(interval);
-  }, [keys]);
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     setSpeed((prev) => {
+  //       let next = prev;
+  //       if (keys.up) next += accelRate;
+  //       if (keys.down) next -= decelRate;
+  //       next = Math.min(maxSpeed, Math.max(0, next));
+  //       return next;
+  //     });
+  //   }, 16);
+  //   return () => clearInterval(interval);
+  // }, [keys]);
 
   // helpers
   const mapRange = (
